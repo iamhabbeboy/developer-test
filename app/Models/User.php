@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Events\AchievementUnlocked;
+use App\Events\BadgeUnlocked;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -42,4 +44,48 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function badges()
+    {
+        return $this->belongsToMany(Badge::class);
+    }
+
+    public function assignBadges($badges): static
+    {
+        $this->badges()->syncWithoutDetaching($badges);
+        $lastBadge = $this->badges->last();
+        BadgeUnlocked::dispatch($this, $lastBadge->name);
+        return $this;
+    }
+
+    public function watched()
+    {
+        return $this->belongsToMany(Lesson::class)->wherePivot('watched', true);
+    }
+
+    public function achievements()
+    {
+        return $this->belongsToMany(Achievement::class);
+    }
+
+    public function awardAchievement($achievements): static
+    {
+//        if(!$this->achievements->count()) {
+//            return $this;
+//        }
+        $this->achievements()->syncWithoutDetaching($achievements);
+        $lastAchievement = $this->achievements->last();
+        AchievementUnlocked::dispatch($this, $lastAchievement->title ?? "");
+        return $this;
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function lessons()
+    {
+        return $this->belongsToMany(Lesson::class);
+    }
 }
